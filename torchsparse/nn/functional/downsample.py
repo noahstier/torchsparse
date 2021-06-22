@@ -1,49 +1,43 @@
+from typing import Tuple, Union
+
 import torch
-import torchsparse_backend
-from torch.autograd import Function
-from torchsparse.nn.functional.hash import *
-from torchsparse.nn.functional.voxelize import spvoxelize
+
+from torchsparse.nn.functional.utils import get_kernel_offsets
+from torchsparse.utils import make_ntuple
 
 __all__ = ['spdownsample']
 
 
-class DownsampleGPU(Function):
-    @staticmethod
-    def forward(ctx, coords, ratio):
-        coords_float = coords[:, :3].float()
-        # following Minkowski engine
-        coords_new = torch.floor(torch.floor(coords_float / ratio) *
-                                 ratio).int()
-        coords_new = torch.cat([coords_new, coords[:, 3].view(-1, 1)], 1)
-        coords_new_hash = sphash(coords_new)
-        uq, inv, cnt = torch.unique(coords_new_hash,
-                                    return_inverse=True,
-                                    return_counts=True)
-        inv = inv.int()
-        cnt = cnt.int()
-        # rounding is necessary
-        # gpu
-        if 'cuda' in str(coords.device):
-            uq_coords = torch.round(spvoxelize(coords_new.float(), inv,
-                                                      cnt))
-        elif 'cpu' in str(coords.device):
-            uq_coords = torch.round(
-                torchsparse_backend.cpu_insertion_forward(
-                    coords_new.float(), inv, cnt))
-        else:
-            device = coords.device
-            uq_coords = torch.round(
-                torchsparse_backend.cpu_insertion_forward(
-                    coords_new.float().cpu(), inv.cpu(), cnt.cpu()))
-            uq_coords = uq_coords.to(device)
-        uq_coords = uq_coords.int()
+def spdownsample(
+        coords: torch.Tensor,
+        stride: Union[int, Tuple[int, ...]] = 2,
+        kernel_size: Union[int, Tuple[int, ...]] = 2,
+        tensor_stride: Union[int, Tuple[int, ...]] = 1) -> torch.Tensor:
+    stride = make_ntuple(stride, ndim=3)
+    kernel_size = make_ntuple(kernel_size, ndim=3)
+    tensor_stride = make_ntuple(tensor_stride, ndim=3)
 
-        # Notice: corrds_new_hash cannot be directly used
-        return uq_coords  #, coords_new_hash
+    sample_stride = [stride[k] * tensor_stride[k] for k in range(3)]
 
+    if all(stride[k] in [1, kernel_size[k]] for k in range(3)):
+        sample_stride = torch.tensor(sample_stride,
+                                     dtype=torch.int,
+                                     device=coords.device).unsqueeze(0)
+        coords = coords.clone()
+        coords[:, :3] = coords[:, :3] // sample_stride * sample_stride
+    else:
+        offsets = get_kernel_offsets(kernel_size,
+                                     tensor_stride,
+                                     device=coords.device)
 
-downsample_gpu = DownsampleGPU.apply
+        xyz = coords[:, :3].unsqueeze(1).repeat(1, offsets.size(0), 1) + offsets
+        b = coords[:, 3:].repeat(1, offsets.size(0))
+        coords = torch.cat([xyz.view(-1, 3), b.view(-1, 1)], dim=1)
 
+        mask = ((coords[:, 0] % sample_stride[0] == 0)
+                & (coords[:, 1] % sample_stride[1] == 0)
+                & (coords[:, 2] % sample_stride[2] == 0))
+        coords = coords[mask]
 
-def spdownsample(coords, ratio):
-    return downsample_gpu(coords, ratio)
+    coords = torch.unique(coords, dim=0)
+    return coords

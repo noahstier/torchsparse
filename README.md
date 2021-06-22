@@ -8,7 +8,7 @@
 
 ## Overview
 
-We release `torchsparse`, a high-performance computing library for efficient 3D sparse convolution. This library aims at accelerating sparse computation in 3D, in particular the Sparse Convolution operation. 
+We release `torchsparse`, a high-performance computing library for efficient 3D sparse convolution. This library aims at accelerating sparse computation in 3D, in particular the Sparse Convolution operation.
 
 <img src="https://hanlab.mit.edu/projects/spvnas/figures/sparseconv_illustration.gif" width="1080">
 
@@ -52,7 +52,7 @@ inds, labels, inverse_map = sparse_quantize(pc, feat, labels, return_index=True,
 
 where `pc`, `feat`, `labels` corresponds to point cloud (coordinates, should be integer), feature and ground-truth. The `inds` denotes unique indices in the point cloud coordinates, and `inverse_map` denotes the unique index each point is corresponding to. The `inverse map` is used to restore full point cloud prediction from downsampled prediction.
 
-To combine a list of `SparseTensor`s to a batch, you may want to use the `torchsparse.utils.sparse_collate_fn` function. 
+To combine a list of `SparseTensor`s to a batch, you may want to use the `torchsparse.utils.sparse_collate_fn` function.
 
 Detailed results are given in [SemanticKITTI dataset preprocessing code](https://github.com/mit-han-lab/e3d/blob/master/spvnas/core/datasets/semantic_kitti.py) in our [SPVNAS](https://github.com/mit-han-lab/e3d) project.
 
@@ -99,7 +99,7 @@ In this example, `sphash` is the function converting integer coordinates to hash
 
 ### Dummy Training Example
 
-We here provides an entire training example with dummy input [here](examples/example.py). In this example, we cover 
+We here provides an entire training example with dummy input [here](examples/example.py). In this example, we cover
 
 - How we start from point cloud data and convert it to SparseTensor format;
 - How we can implement SparseTensor batching;
@@ -109,7 +109,7 @@ You are also welcomed to check out our [SPVNAS](https://github.com/mit-han-lab/e
 
 ### Mixed Precision (float16) Support
 
-Mixed precision training is supported via `torch.cuda.amp.autocast` and `torch.cuda.amp.GradScaler`. Enabling mixed precision training can speed up training and reduce GPU memory usage. By wrapping your training code in a `torch.cuda.amp.autocast` block, feature tensors will automatically be converted to float16 if possible. See [here](examples/example.py) for a complete example. 
+Mixed precision training is supported via `torch.cuda.amp.autocast` and `torch.cuda.amp.GradScaler`. Enabling mixed precision training can speed up training and reduce GPU memory usage. By wrapping your training code in a `torch.cuda.amp.autocast` block, feature tensors will automatically be converted to float16 if possible. See [here](examples/example.py) for a complete example.
 
 ## Speed Comparison Between torchsparse and MinkowskiEngine
 

@@ -1,11 +1,13 @@
+import argparse
+
 import numpy as np
 import torch
 import torch.nn as nn
-import torchsparse
+
 import torchsparse.nn as spnn
 from torchsparse import SparseTensor
-from torchsparse.utils import sparse_collate_fn, sparse_quantize
-import argparse
+from torchsparse.utils.collate import sparse_collate_fn
+from torchsparse.utils.quantize import sparse_quantize
 
 
 def generate_random_point_cloud(size=100000, voxel_size=0.2):
@@ -35,7 +37,7 @@ def generate_batched_random_point_clouds(size=100000,
                                          voxel_size=0.2,
                                          batch_size=2):
     batch = []
-    for i in range(batch_size):
+    for _ in range(batch_size):
         batch.append(generate_random_point_cloud(size, voxel_size))
     return sparse_collate_fn(batch)
 
@@ -45,7 +47,7 @@ def dummy_train(device, mixed=False):
         spnn.Conv3d(4, 32, kernel_size=3, stride=1), spnn.BatchNorm(32),
         spnn.ReLU(True), spnn.Conv3d(32, 64, kernel_size=2, stride=2),
         spnn.BatchNorm(64), spnn.ReLU(True),
-        spnn.Conv3d(64, 64, kernel_size=2, stride=2, transpose=True),
+        spnn.Conv3d(64, 64, kernel_size=2, stride=2, transposed=True),
         spnn.BatchNorm(64), spnn.ReLU(True),
         spnn.Conv3d(64, 32, kernel_size=3, stride=1), spnn.BatchNorm(32),
         spnn.ReLU(True), spnn.Conv3d(32, 10, kernel_size=1)).to(device)
@@ -71,7 +73,7 @@ def dummy_train(device, mixed=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mixed", action="store_true")
+    parser.add_argument('--mixed', action='store_true')
     args = parser.parse_args()
 
     # set seeds for reproducibility
